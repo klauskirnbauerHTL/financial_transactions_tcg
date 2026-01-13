@@ -1,4 +1,17 @@
-# Financial Transactions TCG
+# Financial ## ✨ Features
+
+- 🖥️ **Moderne GUI**: Benutzerfreundliche PyQt6-Oberfläche
+- 🗄️ **Datenbank-Auswahl**: Wähle beim Start eine vorhandene DB oder erstelle eine neue
+- 🔄 **Datenbank wechseln**: Wechsle während der Laufzeit zwischen verschiedenen Datenbanken
+- 📂 **Multi-File-Import**: Importiere mehrere Excel-Dateien gleichzeitig
+- 📊 **Live-Statistiken**: Zeigt Einnahmen, Ausgaben und Saldo in Echtzeit
+- 💾 **Datenbankinfo**: Zeigt aktuellen Pfad, Größe und Status der Datenbank
+- 🗄️ **SQLite-Datenbank**: Lokale Speicherung aller Transaktionen
+- 🔢 **Duplikat-Prüfung**: Verhindert mehrfaches Einfügen derselben Transaktion
+- 📅 **Monatliche Verarbeitung**: Verarbeitet Sheets 01-12 automatisch
+- 🏷️ **Kategorien**: Unterstützung für Transaktionskategorien
+- ⚡ **Background-Import**: Import läuft im Hintergrund ohne UI-Freeze
+- 📋 **Import-Log**: Detaillierte Protokollierung des Import-Vorgangss TCG
 
 Ein Python-Tool mit GUI zur Verwaltung und Import von finanziellen Transaktionen aus Excel-Dateien in eine SQLite-Datenbank.
 
@@ -68,6 +81,22 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+**Beim Start:**
+1. Ein Dialog öffnet sich zur Datenbankauswahl
+2. Wähle eine vorhandene `.db` Datei ODER
+3. Gib einen neuen Dateinamen ein, um eine neue Datenbank zu erstellen
+4. Die Anwendung öffnet sich mit der gewählten Datenbank
+
+**Datenbank wechseln während der Laufzeit:**
+- Menü: `Datei → Datenbank wechseln...`
+- Wähle eine andere Datenbank aus oder erstelle eine neue
+
+**Excel-Dateien importieren:**
+1. Klicke auf "📂 Excel-Dateien auswählen und importieren"
+2. Wähle eine oder mehrere Excel-Dateien aus
+3. Der Import läuft automatisch im Hintergrund
+4. Statistiken und Log werden live aktualisiert
 
 ### Alte Kommandozeilen-Version
 ```bash

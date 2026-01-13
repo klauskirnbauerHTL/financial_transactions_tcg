@@ -46,12 +46,14 @@ class ImportThread(QThread):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, db_path="transactions.db"):
         super().__init__()
-        self.db_manager = DatabaseManager()
+        self.db_path = db_path
+        self.db_manager = DatabaseManager(db_path)
         self.import_thread = None
         self.init_ui()
         self.update_statistics()
+        self.show_database_info()
     
     def init_ui(self):
         """Initialize the user interface"""
@@ -73,6 +75,23 @@ class MainWindow(QMainWindow):
         title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(title_label)
+        
+        # Create Menu Bar
+        self.create_menu()
+        
+        # Database Info Label
+        self.db_info_label = QLabel()
+        self.db_info_label.setStyleSheet("""
+            QLabel {
+                font-size: 11px;
+                color: #666;
+                padding: 5px;
+                background-color: #f8f8f8;
+                border-radius: 3px;
+            }
+        """)
+        self.db_info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(self.db_info_label)
         
         # Statistics Group
         stats_group = self._create_statistics_group()
@@ -102,6 +121,29 @@ class MainWindow(QMainWindow):
         button_layout.addStretch()
         
         main_layout.addLayout(button_layout)
+    
+    def create_menu(self):
+        """Create menu bar with database and file options"""
+        menubar = self.menuBar()
+        
+        # File Menu
+        file_menu = menubar.addMenu("📁 Datei")
+        
+        # Switch Database Action
+        switch_db_action = file_menu.addAction("🔄 Datenbank wechseln...")
+        switch_db_action.triggered.connect(self.switch_database)
+        
+        file_menu.addSeparator()
+        
+        # Exit Action
+        exit_action = file_menu.addAction("❌ Beenden")
+        exit_action.triggered.connect(self.close)
+        
+        # Help Menu
+        help_menu = menubar.addMenu("❓ Hilfe")
+        
+        about_action = help_menu.addAction("ℹ️ Über")
+        about_action.triggered.connect(self.show_about)
     
     def _create_statistics_group(self):
         """Create statistics display group"""
@@ -196,6 +238,23 @@ class MainWindow(QMainWindow):
         
         self.stats_label.setText(stats_text)
     
+    def show_database_info(self):
+        """Display current database path and size"""
+        if os.path.exists(self.db_path):
+            file_size = os.path.getsize(self.db_path)
+            size_kb = file_size / 1024
+            size_text = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
+            status = "✅ Vorhanden"
+        else:
+            size_text = "Neu"
+            status = "🆕 Wird erstellt"
+        
+        db_name = os.path.basename(self.db_path)
+        db_dir = os.path.dirname(self.db_path) or "Aktuelles Verzeichnis"
+        
+        info_text = f"📁 Datenbank: <b>{db_name}</b> | 📍 {db_dir} | {status} | 💾 {size_text}"
+        self.db_info_label.setText(info_text)
+    
     def select_and_import_files(self):
         """Select Excel files and start import"""
         file_paths, _ = QFileDialog.getOpenFileNames(
@@ -235,8 +294,9 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         self.import_btn.setEnabled(True)
         
-        # Update statistics
+        # Update statistics and database info
         self.update_statistics()
+        self.show_database_info()
         
         # Show results
         result_msg = f"""
@@ -264,6 +324,63 @@ Import abgeschlossen!
         msg += "Ein Daten-Viewer ist in einer zukünftigen Version geplant."
         
         QMessageBox.information(self, "Daten anzeigen", msg)
+    
+    def switch_database(self):
+        """Allow user to switch to a different database"""
+        dialog = QFileDialog()
+        dialog.setWindowTitle("Datenbank wechseln")
+        dialog.setFileMode(QFileDialog.FileMode.AnyFile)
+        dialog.setNameFilter("SQLite Datenbank (*.db);;Alle Dateien (*.*)")
+        dialog.setDefaultSuffix("db")
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        dialog.setDirectory(os.path.dirname(self.db_path) or os.getcwd())
+        
+        if dialog.exec():
+            selected_files = dialog.selectedFiles()
+            if selected_files:
+                new_db_path = selected_files[0]
+                
+                # Ask for confirmation if current database has unsaved changes
+                reply = QMessageBox.question(
+                    self,
+                    "Datenbank wechseln",
+                    f"Möchten Sie zur Datenbank wechseln:\n{new_db_path}",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                
+                if reply == QMessageBox.StandardButton.Yes:
+                    # Close current database
+                    self.db_manager.close()
+                    
+                    # Open new database
+                    self.db_path = new_db_path
+                    self.db_manager = DatabaseManager(new_db_path)
+                    
+                    # Update UI
+                    self.update_statistics()
+                    self.show_database_info()
+                    self.log_text.clear()
+                    self.log_text.append(f"✅ Datenbank gewechselt zu:\n{new_db_path}\n")
+    
+    def show_about(self):
+        """Show about dialog"""
+        about_text = """
+        <h2>Financial Transactions TCG</h2>
+        <p><b>Version:</b> 1.0.0</p>
+        <p><b>Autor:</b> Klaus Kirnbauer</p>
+        <p><b>Organisation:</b> HTL Pinkafeld</p>
+        <hr>
+        <p>Import-Tool für Excel-basierte Transaktionsdaten</p>
+        <p>
+        <b>Features:</b><br>
+        • Multi-File Excel-Import<br>
+        • Live-Statistiken<br>
+        • SQLite-Datenbank<br>
+        • Duplikat-Prüfung<br>
+        • Datenbank-Verwaltung
+        </p>
+        """
+        QMessageBox.about(self, "Über Financial Transactions TCG", about_text)
     
     def closeEvent(self, event):
         """Handle window close event"""
