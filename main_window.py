@@ -20,9 +20,9 @@ class ImportThread(QThread):
     progress = pyqtSignal(str)
     finished = pyqtSignal(int, int, int)
     
-    def __init__(self, db_manager, file_paths):
+    def __init__(self, db_path, file_paths):
         super().__init__()
-        self.db_manager = db_manager
+        self.db_path = db_path
         self.file_paths = file_paths
     
     def run(self):
@@ -31,7 +31,11 @@ class ImportThread(QThread):
         total_skipped = 0
         total_errors = 0
         
-        importer = ExcelImporter(self.db_manager)
+        # Create a NEW database manager in this thread (thread-safe)
+        db_manager = DatabaseManager(self.db_path)
+        
+        # Create importer with progress callback
+        importer = ExcelImporter(db_manager, progress_callback=lambda msg: self.progress.emit(msg))
         
         for i, file_path in enumerate(self.file_paths, 1):
             file_name = os.path.basename(file_path)
@@ -41,6 +45,9 @@ class ImportThread(QThread):
             total_imported += imported
             total_skipped += skipped
             total_errors += errors
+        
+        # Close the database connection
+        db_manager.close()
         
         self.finished.emit(total_imported, total_skipped, total_errors)
 
@@ -257,6 +264,21 @@ class MainWindow(QMainWindow):
     
     def select_and_import_files(self):
         """Select Excel files and start import"""
+        # Show current database status before import
+        current_count = self.db_manager.get_transaction_count()
+        
+        reply = QMessageBox.question(
+            self,
+            "Import starten",
+            f"Aktuelle Datenbank: {os.path.basename(self.db_path)}\n"
+            f"Vorhandene Transaktionen: {current_count}\n\n"
+            f"Excel-Dateien zum Importieren auswählen?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
         file_paths, _ = QFileDialog.getOpenFileNames(
             self,
             "Excel-Dateien auswählen",
@@ -278,8 +300,8 @@ class MainWindow(QMainWindow):
         
         self.log_text.append(f"Starte Import von {len(file_paths)} Datei(en)...\n")
         
-        # Create and start import thread
-        self.import_thread = ImportThread(self.db_manager, file_paths)
+        # Create and start import thread (pass db_path instead of db_manager for thread safety)
+        self.import_thread = ImportThread(self.db_path, file_paths)
         self.import_thread.progress.connect(self.on_import_progress)
         self.import_thread.finished.connect(self.on_import_finished)
         self.import_thread.start()
@@ -288,6 +310,10 @@ class MainWindow(QMainWindow):
         """Handle progress updates from import thread"""
         self.log_text.append(message)
         self.status_label.setText(message)
+        # Auto-scroll to bottom
+        self.log_text.verticalScrollBar().setValue(
+            self.log_text.verticalScrollBar().maximum()
+        )
     
     def on_import_finished(self, imported, skipped, errors):
         """Handle import completion"""
@@ -298,6 +324,9 @@ class MainWindow(QMainWindow):
         self.update_statistics()
         self.show_database_info()
         
+        # Get current transaction count
+        total_transactions = self.db_manager.get_transaction_count()
+        
         # Show results
         result_msg = f"""
 Import abgeschlossen!
@@ -305,25 +334,60 @@ Import abgeschlossen!
 ✅ Neu importiert: {imported}
 ⏭️ Übersprungen (bereits vorhanden): {skipped}
 ❌ Fehler: {errors}
+
+📊 Gesamt in Datenbank: {total_transactions} Transaktionen
         """
         
         self.log_text.append("\n" + result_msg)
         self.status_label.setText("Import abgeschlossen!")
         
-        # Show message box
+        # Show detailed message box
         if errors > 0:
             QMessageBox.warning(self, "Import mit Fehlern", result_msg)
         else:
-            QMessageBox.information(self, "Import erfolgreich", result_msg)
+            # Show success with option to view data
+            reply = QMessageBox.information(
+                self, 
+                "Import erfolgreich", 
+                result_msg + "\n\nMöchten Sie die Transaktionen anzeigen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                self.show_data_viewer()
     
     def show_data_viewer(self):
-        """Show data viewer window (placeholder for future implementation)"""
+        """Show data viewer window"""
         transactions = self.db_manager.get_all_transactions()
         
-        msg = f"Datenbank enthält {len(transactions)} Transaktionen.\n\n"
-        msg += "Ein Daten-Viewer ist in einer zukünftigen Version geplant."
+        if not transactions:
+            QMessageBox.information(
+                self, 
+                "Daten anzeigen", 
+                "Die Datenbank enthält keine Transaktionen."
+            )
+            return
         
-        QMessageBox.information(self, "Daten anzeigen", msg)
+        # Create a simple text display of transactions
+        msg = f"Datenbank: {os.path.basename(self.db_path)}\n"
+        msg += f"Anzahl Transaktionen: {len(transactions)}\n"
+        msg += "="*60 + "\n\n"
+        
+        # Show first 10 transactions
+        for i, trans in enumerate(transactions[:10], 1):
+            trans_id, date, desc, cat, income, expense = trans
+            msg += f"{i}. ID={trans_id} | {date} | {desc[:30]}\n"
+            msg += f"   Kategorie: {cat} | E: €{income:.2f} | A: €{expense:.2f}\n\n"
+        
+        if len(transactions) > 10:
+            msg += f"\n... und {len(transactions) - 10} weitere Transaktionen"
+        
+        # Create scrollable message box
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Transaktionen in Datenbank")
+        dialog.setText(msg)
+        dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+        dialog.exec()
     
     def switch_database(self):
         """Allow user to switch to a different database"""
