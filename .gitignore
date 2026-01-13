@@ -13,6 +13,11 @@ venv/
 ENV/
 env/
 
+# PyInstaller
+*.spec.bak
+*.manifest
+*.spec~
+
 # Database
 *.db
 *.sqlite

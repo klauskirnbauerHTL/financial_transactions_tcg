@@ -1,18 +1,26 @@
 # Financial Transactions TCG
 
-Ein Python-Tool zur Verwaltung und Import von finanziellen Transaktionen aus Excel-Dateien in eine SQLite-Datenbank.
+Ein Python-Tool mit GUI zur Verwaltung und Import von finanziellen Transaktionen aus Excel-Dateien in eine SQLite-Datenbank.
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.9%2B-brightgreen)
+![PyQt6](https://img.shields.io/badge/PyQt6-6.6%2B-green)
 
 ## 📋 Beschreibung
 
-Dieses Tool ermöglicht den Import von Transaktionsdaten aus Excel-Dateien (z.B. monatliche Kassabücher) in eine SQLite-Datenbank. Es verarbeitet automatisch mehrere Sheets (01-12 für die Monate) und verhindert Duplikate durch ID-Prüfung.
+Dieses Tool ermöglicht den Import von Transaktionsdaten aus Excel-Dateien (z.B. monatliche Kassabücher) in eine SQLite-Datenbank über eine benutzerfreundliche grafische Oberfläche. Es verarbeitet automatisch mehrere Sheets (01-12 für die Monate) und verhindert Duplikate durch ID-Prüfung.
 
 ## ✨ Features
 
-- 📊 **Excel-Import**: Automatischer Import aus Excel-Dateien
+- �️ **Moderne GUI**: Benutzerfreundliche PyQt6-Oberfläche
+- 📂 **Multi-File-Import**: Importiere mehrere Excel-Dateien gleichzeitig
+- 📊 **Live-Statistiken**: Zeigt Einnahmen, Ausgaben und Saldo in Echtzeit
 - 🗄️ **SQLite-Datenbank**: Lokale Speicherung aller Transaktionen
 - 🔢 **Duplikat-Prüfung**: Verhindert mehrfaches Einfügen derselben Transaktion
 - 📅 **Monatliche Verarbeitung**: Verarbeitet Sheets 01-12 automatisch
 - 🏷️ **Kategorien**: Unterstützung für Transaktionskategorien
+- ⚡ **Background-Import**: Import läuft im Hintergrund ohne UI-Freeze
+- 📋 **Import-Log**: Detaillierte Protokollierung des Import-Vorgangs
 
 ## 🗂️ Datenbankstruktur
 
@@ -31,23 +39,60 @@ Dieses Tool ermöglicht den Import von Transaktionsdaten aus Excel-Dateien (z.B.
 ## 🚀 Installation
 
 ### Voraussetzungen
-- Python 3.x
+- Python 3.9 oder höher
+- PyQt6
 - openpyxl
+
+### Virtuelle Umgebung erstellen (empfohlen)
+
+#### Windows
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+#### macOS/Linux
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
 ### Abhängigkeiten installieren
 ```bash
-pip install openpyxl
+pip install -r requirements.txt
 ```
 
 ## 💻 Verwendung
 
+### GUI-Version (empfohlen)
 ```bash
-python transactions.py
+python main.py
 ```
 
-Das Programm fragt nach dem Pfad zur Excel-Datei:
+### Alte Kommandozeilen-Version
+```bash
+python transactions_old.py
 ```
-Bitte den Pfad zur Excel-Datei angeben: /pfad/zur/datei.xlsx
+
+## 📦 Vorkompilierte Downloads
+
+Für Windows und macOS stehen vorkompilierte ausführbare Dateien zur Verfügung:
+
+👉 [Releases herunterladen](https://github.com/klauskirnbauerHTL/financial_transactions_tcg/releases)
+
+- **macOS**: `.zip` mit `.app` Bundle
+- **Windows**: `.exe` Datei
+
+### ⚠️ macOS Sicherheitshinweis
+
+Da die App nicht von Apple signiert ist, müssen Sie beim ersten Start:
+
+**Rechtsklick → Öffnen → Im Dialog "Öffnen" bestätigen**
+
+Oder im Terminal:
+```bash
+xattr -cr FinancialTransactionsTCG.app
+open FinancialTransactionsTCG.app
 ```
 
 ### Excel-Format
@@ -74,25 +119,71 @@ Die Excel-Datei sollte folgende Struktur haben:
 ### Projekt-Struktur
 ```
 financial_transactions_tcg/
-├── transactions.py      # Hauptskript
-├── transactions.db      # SQLite-Datenbank (generiert)
-├── .gitignore          # Git-Ignore Regeln
-└── README.md           # Diese Datei
+├── main.py                  # Haupteinstiegspunkt (GUI)
+├── main_window.py           # PyQt6 Hauptfenster
+├── database.py              # Datenbank-Manager
+├── excel_importer.py        # Excel-Import-Logik
+├── transactions_old.py      # Alte CLI-Version (Legacy)
+├── transactions.db          # SQLite-Datenbank (generiert)
+├── requirements.txt         # Python-Abhängigkeiten
+├── build.spec              # PyInstaller-Konfiguration
+├── .github/workflows/       # CI/CD Pipeline
+└── README.md               # Diese Datei
+```
+
+### Eigene Builds erstellen
+
+#### Mit PyInstaller
+```bash
+pip install pyinstaller
+pyinstaller build.spec
+```
+
+Die ausführbare Datei findet sich dann in `dist/`.
+
+#### macOS App Bundle
+```bash
+pyinstaller build.spec
+# Ausgabe: dist/FinancialTransactionsTCG.app
+```
+
+#### Windows Executable
+```bash
+pyinstaller build.spec
+# Ausgabe: dist/FinancialTransactionsTCG.exe
 ```
 
 ## 🐛 Troubleshooting
+
+### "ModuleNotFoundError: No module named 'PyQt6'"
+```bash
+pip install PyQt6
+```
 
 ### "ModuleNotFoundError: No module named 'openpyxl'"
 ```bash
 pip install openpyxl
 ```
 
+### Virtuelle Umgebung nicht gefunden
+Stelle sicher, dass die virtuelle Umgebung aktiviert ist:
+```bash
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+```
+
 ### Datenbank zurücksetzen
 Falls du die Datenbank neu erstellen möchtest:
 ```bash
 rm transactions.db
-python transactions.py
+python main.py
 ```
+
+### Windows: "Kein gültiges Win32-Programm"
+Stelle sicher, dass du die richtige Python-Version (64-bit) verwendest.
 
 ## 📄 Lizenz
 
